@@ -24,7 +24,7 @@ peft_model_id = "ShahzaibDev/biomistral-medqa-finetune"
 model_path = "./BioMistral-7B"
 
 # Download base model weights from Google Drive if not available locally
-drive_url = "https://drive.google.com/uc?id=1zCasi0vGr8lTnqZqmxlsqK4nb2HagNpG"
+drive_url = "https://drive.google.com/file/d/1zCasi0vGr8lTnqZqmxlsqK4nb2HagNpG/view?usp=sharing"
 if not os.path.exists(model_path):
     print("Downloading model weights from Google Drive...")
     gdown.download(drive_url, f"{model_path}.zip", quiet=False)
