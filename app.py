@@ -1,48 +1,47 @@
+import os
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-import gdown
-import os
 from pydantic import BaseModel
+import gdown
 
 # FastAPI app initialization
 app = FastAPI()
 
-# Define configurations for 4-bit loading
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.bfloat16
-)
+# Google Drive file URLs
+pytorch_model_url = "https://drive.google.com/uc?export=download&id=1zCasi0vGr8lTnqZqmxlsqK4nb2HagNpG"  # Replace YOUR_FILE_ID
+model_path = "./model_file"
 
-# Model and tokenizer IDs
-base_model_id = "BioMistral/BioMistral-7B"
-peft_model_id = "ShahzaibDev/biomistral-medqa-finetune"
-model_path = "./BioMistral-7B"
-
-# Download base model weights from Google Drive if not available locally
-drive_url = "https://drive.google.com/file/d/1zCasi0vGr8lTnqZqmxlsqK4nb2HagNpG/view?usp=sharing"
+# Ensure the model folder exists locally
 if not os.path.exists(model_path):
-    print("Downloading model weights from Google Drive...")
-    gdown.download(drive_url, f"{model_path}.zip", quiet=False)
-    os.system(f"unzip {model_path}.zip -d ./")
+    os.makedirs(model_path)
+
+# Download pytorch_model.bin if not already available
+bin_file_path = os.path.join(model_path, "pytorch_model.bin")
+if not os.path.exists(bin_file_path):
+    print("Downloading pytorch_model.bin from Google Drive...")
+    gdown.download(pytorch_model_url, bin_file_path, quiet=False)
+
+# Use Hugging Face base model for config and tokenizer files
+base_model_id = "BioMistral/BioMistral-7B"
 
 # Load tokenizer
+print("Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(base_model_id)
 
-# Load base model with 4-bit precision
-print("Loading the base model with 4-bit precision...")
+# Load base model with your local weight
+print("Loading the base model...")
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_id,
-    device_map="auto",
-    quantization_config=bnb_config
+    state_dict=torch.load(bin_file_path, map_location="cpu"),  # Load custom weights
+    device_map="cpu",  # Explicitly load to CPU
 )
 
 # Load the fine-tuned PEFT model
-print("Loading the PEFT model...")
+print("Loading the fine-tuned PEFT model...")
+peft_model_id = "ShahzaibDev/biomistral-medqa-finetune"
 model = PeftModel.from_pretrained(base_model, peft_model_id)
 
 # Define request format
@@ -58,24 +57,25 @@ async def health_check():
 # API endpoint for asking questions
 @app.post("/ask")
 async def ask_question(request: QuestionRequest):
-    if request.question_type:  # Structured question
-        eval_prompt = f"""From the MedQuad MedicalQA Dataset: Given the following medical question and question type, provide an accurate answer:
-
+    # Generate prompt for structured or simple question
+    if request.question_type:
+        prompt = f"""From the MedQuad MedicalQA Dataset: Given the following medical question and question type, provide an accurate answer:
 ### Question type:
 {request.question_type}
-
 ### Question:
 {request.question}
-
 ### Answer:
 """
-        inputs = tokenizer(eval_prompt, return_tensors="pt").to("cuda")
-    else:  # Simple question
-        inputs = tokenizer(request.question, return_tensors="pt").to("cuda")
+    else:
+        prompt = request.question
 
+    # Tokenize input and ensure it's on CPU
+    inputs = tokenizer(prompt, return_tensors="pt").to("cpu")
+
+    # Generate response
     model.eval()
     with torch.no_grad():
         outputs = model.generate(**inputs, max_new_tokens=300)
+    
     answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return JSONResponse(content={"answer": answer})
-
