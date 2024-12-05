@@ -1,0 +1,8 @@
+transformers
+accelerate
+torch
+peft
+fastapi
+uvicorn
+bitsandbytes
+safetensors
