@@ -1,45 +1,28 @@
-import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-import gdown
 
 # FastAPI app initialization
 app = FastAPI()
 
-# Google Drive file URLs
-pytorch_model_url = "https://drive.google.com/uc?export=download&id=1zCasi0vGr8lTnqZqmxlsqK4nb2HagNpG"  # Replace YOUR_FILE_ID
-model_path = "./model_file"
-
-# Ensure the model folder exists locally
-if not os.path.exists(model_path):
-    os.makedirs(model_path)
-
-# Download pytorch_model.bin if not already available
-bin_file_path = os.path.join(model_path, "pytorch_model.bin")
-if not os.path.exists(bin_file_path):
-    print("Downloading pytorch_model.bin from Google Drive...")
-    gdown.download(pytorch_model_url, bin_file_path, quiet=False)
-
 # Use Hugging Face base model for config and tokenizer files
-base_model_id = "BioMistral/BioMistral-7B"
+base_model_id = "ShahzaibDev/Biomistral_Model_weight_files"
 
 # Load tokenizer
 print("Loading tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(base_model_id)
 
-# Load base model with your local weight
+# Load base model directly from Hugging Face
 print("Loading the base model...")
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_id,
-    state_dict=torch.load(bin_file_path, map_location="cpu"),  # Load custom weights
     device_map="cpu",  # Explicitly load to CPU
 )
 
-# Load the fine-tuned PEFT model
+# Load the fine-tuned PEFT model from Hugging Face
 print("Loading the fine-tuned PEFT model...")
 peft_model_id = "ShahzaibDev/biomistral-medqa-finetune"
 model = PeftModel.from_pretrained(base_model, peft_model_id)
