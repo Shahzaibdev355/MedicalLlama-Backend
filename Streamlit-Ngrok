@@ -71,3 +71,36 @@ if st.button("Get Answer"):
             answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
             st.success("Response generated:")
             st.write(answer)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#pip install pyngrok
+# !ngrok config add-authtoken 2pnVmWy04kYVi1iqeua6vEuSP5o_2VWdescXdEfSWGp8npCXN
+# !streamlit run test10.py
+
+
+from pyngrok import ngrok
+# Start the Streamlit app in the background
+!streamlit run test10.py &>/dev/null &
+# Expose the app on port 8502 (the correct port where Streamlit is running)
+public_url = ngrok.connect(8501)  # Ensure the port matches the Streamlit app port
+print(f"Streamlit app is live at: {public_url}")
+
+
+!curl http://localhost:8501
+
+
+
+
+
