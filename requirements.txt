@@ -1,8 +1,8 @@
 transformers
-accelerate
-torch
 peft
-fastapi
-uvicorn
+accelerate
 bitsandbytes
-safetensors
+torch
+fastapi
+gdown
+uvicorn
